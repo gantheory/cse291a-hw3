@@ -77,7 +77,6 @@ class GenerativeParser implements Parser
 		for (int state = 0; state < numOfStates; ++state) {
 			String tag = indexer.get(state);
 			for (int i = 0; i < sentence.size(); ++i) {
-			  if (!lexicon.isKnown(sentence.get(i))) continue;
 			  // score could be NaN
 				double score = lexicon.scoreTagging(sentence.get(i), tag);
 				if (score != MIN_LOG_PROB && Double.isFinite(score)) tagScore[state][i] = score;
@@ -133,14 +132,6 @@ class GenerativeParser implements Parser
 			  		if ((unaryDP[state][i][j] == MIN_LOG_PROB) || (logScore > unaryDP[state][i][j])) {
 			  			unaryDP[state][i][j] = logScore;
 			  			unaryDPChild[state][i][j] = rule.getChild();
-						}
-					}
-					if (!sameChildRule) {
-						double logScore = binaryDP[state][i][j];
-						if (logScore == MIN_LOG_PROB) continue;
-						if ((unaryDP[state][i][j] == MIN_LOG_PROB) || (logScore > unaryDP[state][i][j])) {
-							unaryDP[state][i][j] = logScore;
-							unaryDPChild[state][i][j] = state;
 						}
 					}
 				}
