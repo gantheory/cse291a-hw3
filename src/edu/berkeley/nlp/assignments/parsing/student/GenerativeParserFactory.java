@@ -36,6 +36,7 @@ class GenerativeParser implements Parser
 	final int SENTENCE_LENGTH = 40;
 	final Tree<String> NULL_TREE = new Tree<String>("ROOT", Collections.singletonList(new Tree<String>("JUNK")));
 	final boolean useSloppyMath = false;
+	final boolean unFoldClosure = true;
 
 	CounterMap<List<String>, Tree<String>> knownParses;
 
@@ -165,7 +166,7 @@ class GenerativeParser implements Parser
 
 		UnaryRule rule = new UnaryRule(parent, child);
 		List<Integer> closurePath = unaryClosure.getPath(rule);
-		if (closurePath.size() > 2) {
+		if (unFoldClosure && closurePath.size() > 2) {
 			Tree<String> prev = node;
 			for (int i = 1; i < closurePath.size() - 1; ++i) {
 				Tree<String> now = new Tree<String>(indexer.get(closurePath.get(i)));
