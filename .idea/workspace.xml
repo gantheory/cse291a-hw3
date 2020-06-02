@@ -2,7 +2,6 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="b635ee4e-2d6c-4e9f-91b0-864b8a1a563a" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/edu/berkeley/nlp/assignments/parsing/student/GenerativeParserFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/edu/berkeley/nlp/assignments/parsing/student/GenerativeParserFactory.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -41,7 +40,7 @@
       <option name="presentableId" value="Default" />
       <updated>1590788613821</updated>
       <workItem from="1590788617506" duration="1935000" />
-      <workItem from="1590790656346" duration="44630000" />
+      <workItem from="1590790656346" duration="45146000" />
     </task>
     <servers />
   </component>

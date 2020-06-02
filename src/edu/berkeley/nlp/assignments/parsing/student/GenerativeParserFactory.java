@@ -7,7 +7,6 @@ import edu.berkeley.nlp.assignments.parsing.UnaryClosure;
 import edu.berkeley.nlp.util.CounterMap;
 import edu.berkeley.nlp.util.Indexer;
 import edu.berkeley.nlp.math.SloppyMath;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -22,14 +21,6 @@ import edu.berkeley.nlp.ling.Trees.PennTreeRenderer;
 
 class GenerativeParser implements Parser
 {
-
-	public static class GenerativeParserFactory implements ParserFactory {
-
-		public Parser getParser(List<Tree<String>> trainTrees) {
-			return new GenerativeParser(trainTrees);
-		}
-	}
-
 	final boolean debug = false;
 	final double EPSILON = 1e-9;
 	final double MIN_LOG_PROB = Double.NEGATIVE_INFINITY; // Math.log(EPSILON);
@@ -38,16 +29,9 @@ class GenerativeParser implements Parser
 	final boolean useSloppyMath = false;
 	final boolean unFoldClosure = true;
 
-	CounterMap<List<String>, Tree<String>> knownParses;
-
-	CounterMap<Integer, String> spanToCategories;
-
 	Grammar grammar;
-
 	SimpleLexicon lexicon;
-
 	UnaryClosure unaryClosure;
-
 	Indexer<String> indexer;
 
 	double[][] tagScore;
@@ -122,9 +106,7 @@ class GenerativeParser implements Parser
 			for (int state = 0; state < numOfStates; ++state) {
 				for (int i = 0; i < sentence.size() - length + 1; ++i) {
 					int j = i + length - 1;
-					boolean sameChildRule = false;
 					for (UnaryRule rule : unaryClosure.getClosedUnaryRulesByParent(state)) {
-					  if (rule.getChild() == state) sameChildRule = true;
 			  		double logRuleScore = rule.getScore();
 			  		if (logRuleScore == MIN_LOG_PROB) continue;
 						double logChildScore = binaryDP[rule.getChild()][i][j];
@@ -155,21 +137,21 @@ class GenerativeParser implements Parser
 	private Tree<String> buildUnaryTree(int parent, int l, int r, List<String> sentence) {
 		if (l == r) {
 			int preTerminal = unaryDPChild[parent][l][r];
-			Tree<String> treeWithTerminal = new Tree<String>(indexer.get(preTerminal), Collections.singletonList(new Tree<String>(sentence.get(l))));
+			Tree<String> treeWithTerminal = new Tree<>(indexer.get(preTerminal), Collections.singletonList(new Tree<>(sentence.get(l))));
 			if (parent == preTerminal) return treeWithTerminal;
-			return new Tree<String>(indexer.get(parent), Collections.singletonList(treeWithTerminal));
+			return new Tree<>(indexer.get(parent), Collections.singletonList(treeWithTerminal));
 		}
 		int child = unaryDPChild[parent][l][r];
 		if (parent == child) return buildBinaryTree(child, l, r, sentence);
 
-		Tree<String> node = new Tree<String>(indexer.get(parent));
+		Tree<String> node = new Tree<>(indexer.get(parent));
 
 		UnaryRule rule = new UnaryRule(parent, child);
 		List<Integer> closurePath = unaryClosure.getPath(rule);
 		if (unFoldClosure && closurePath.size() > 2) {
 			Tree<String> prev = node;
 			for (int i = 1; i < closurePath.size() - 1; ++i) {
-				Tree<String> now = new Tree<String>(indexer.get(closurePath.get(i)));
+				Tree<String> now = new Tree<>(indexer.get(closurePath.get(i)));
 				prev.setChildren(Collections.singletonList(now));
 				prev = prev.getChildren().get(0);
 			}
@@ -185,13 +167,13 @@ class GenerativeParser implements Parser
 
 	private Tree<String> buildBinaryTree(int parent, int l, int r, List<String> sentence) {
 		if (l == r) return buildUnaryTree(parent, l, r, sentence);
-		Tree<String> node = new Tree<String>(indexer.get(parent));
+		Tree<String> node = new Tree<>(indexer.get(parent));
 		int mid = binaryDPSplit[parent][l][r];
 		int leftChild = binaryDPLeftChild[parent][l][r];
 		int rightChild = binaryDPRightChild[parent][l][r];
 	  Tree<String> leftTree = buildUnaryTree(leftChild, l, mid, sentence);
 	  Tree<String> rightTree = buildUnaryTree(rightChild, mid + 1, r, sentence);
-	  node.setChildren(new ArrayList<Tree<String>>(List.of(leftTree, rightTree)));
+	  node.setChildren(new ArrayList<>(List.of(leftTree, rightTree)));
 		return node;
 	}
 
@@ -211,30 +193,6 @@ class GenerativeParser implements Parser
 		indexer = grammar.getLabelIndexer();
 
 		int numOfStates = grammar.getLabelIndexer().size();
-
-		if (debug) {
-			System.out.println("Binary rules");
-			for (BinaryRule rule : grammar.getBinaryRules()) {
-				System.out.println(indexer.get(rule.getParent()) + " -> (" + indexer.get(rule.getLeftChild()) + ", " + indexer.get(rule.getRightChild()) + ") ==> " + Math.exp(rule.getScore()));
-			}
-
-			System.out.println("Unary rules");
-			for (UnaryRule rule : grammar.getUnaryRules()) {
-				System.out.println(indexer.get(rule.getParent()) + " -> " + indexer.get(rule.getChild()) + " ==> " + Math.exp(rule.getScore()));
-			}
-
-			System.out.println("All lexicon");
-			for (String s : lexicon.getAllTags()) {
-				System.out.println(s);
-			}
-			System.out.println();
-
-			System.out.println("All states");
-			for (int i = 0; i < numOfStates; ++i) {
-				System.out.println(i + ": " + grammar.getLabelIndexer().get(i));
-			}
-			System.out.println();
-		}
 
 		tagScore = new double[numOfStates][SENTENCE_LENGTH];
 		unaryDP = new double[numOfStates][SENTENCE_LENGTH][SENTENCE_LENGTH];
