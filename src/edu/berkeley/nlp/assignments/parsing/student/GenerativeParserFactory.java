@@ -52,7 +52,7 @@ class GenerativeParser implements Parser
 		for (int state = 0; state < numOfStates; ++state) {
 			for (int i = 0; i < sentence.size(); ++i) {
 			  tagScore[state][i] = MIN_LOG_PROB;
-		  	for (int j = 0; j < sentence.size(); ++j) {
+		  	for (int j = i; j < sentence.size(); ++j) {
 					unaryDP[state][i][j] = MIN_LOG_PROB;
 					unaryDPChild[state][i][j] = -1;
 					binaryDP[state][i][j] = MIN_LOG_PROB;
@@ -136,39 +136,52 @@ class GenerativeParser implements Parser
 	}
 
 	private Tree<String> buildUnaryTree(int parent, int l, int r, List<String> sentence) {
-//		System.out.println("Unary: " + parent + " " + l + " " + r);
 		if (l == r) {
 			int preTerminal = unaryDPChild[parent][l][r];
 			Tree<String> treeWithTerminal = new Tree<>(indexer.get(preTerminal), Collections.singletonList(new Tree<>(sentence.get(l))));
+
 			if (parent == preTerminal) return treeWithTerminal;
-			return new Tree<>(indexer.get(parent), Collections.singletonList(treeWithTerminal));
+
+			if (unFoldClosure) {
+				List<Tree<String>> trees = new ArrayList<>();
+				UnaryRule rule = new UnaryRule(parent, preTerminal);
+				List<Integer> closurePath = unaryClosure.getPath(rule);
+				for (int i = 0; i < closurePath.size(); ++i) {
+					trees.add(new Tree<>(indexer.get(closurePath.get(i))));
+				}
+				trees.add(new Tree<>(sentence.get(l)));
+				for (int i = 0; i < trees.size() - 1; ++i) {
+					trees.get(i).setChildren(Collections.singletonList(trees.get(i + 1)));
+				}
+				return trees.get(0);
+			} else {
+				return new Tree<>(indexer.get(parent), Collections.singletonList(treeWithTerminal));
+			}
 		}
+
 		int child = unaryDPChild[parent][l][r];
 		if (parent == child) return buildBinaryTree(child, l, r, sentence);
 
-		Tree<String> node = new Tree<>(indexer.get(parent));
-
-		UnaryRule rule = new UnaryRule(parent, child);
-		List<Integer> closurePath = unaryClosure.getPath(rule);
-		if (unFoldClosure && closurePath != null && closurePath.size() > 2) {
-			Tree<String> prev = node;
-			for (int i = 1; i < closurePath.size() - 1; ++i) {
-				Tree<String> now = new Tree<>(indexer.get(closurePath.get(i)));
-				prev.setChildren(Collections.singletonList(now));
-				prev = prev.getChildren().get(0);
+		if (unFoldClosure) {
+		  List<Tree<String>> trees = new ArrayList<>();
+			UnaryRule rule = new UnaryRule(parent, child);
+			List<Integer> closurePath = unaryClosure.getPath(rule);
+			for (int i = 0; i < closurePath.size() - 1; ++i) {
+				trees.add(new Tree<>(indexer.get(closurePath.get(i))));
 			}
-			Tree<String> childTree = buildBinaryTree(child, l, r, sentence);
-			prev.setChildren(Collections.singletonList(childTree));
-			return node;
+			trees.add(buildBinaryTree(closurePath.get(closurePath.size() - 1), l, r, sentence));
+			for (int i = 0; i < closurePath.size() - 1; ++i) {
+				trees.get(i).setChildren(Collections.singletonList(trees.get(i + 1)));
+			}
+			return trees.get(0);
 		} else {
 			Tree<String> childTree = buildBinaryTree(child, l, r, sentence);
-			node.setChildren(Collections.singletonList(childTree));
+			Tree<String> node = new Tree<>(indexer.get(parent), Collections.singletonList(childTree));
 			return node;
 		}
 	}
 
 	private Tree<String> buildBinaryTree(int parent, int l, int r, List<String> sentence) {
-//		System.out.println("Binary: " + parent + " " + l + " " + r);
 		if (l == r) return buildUnaryTree(parent, l, r, sentence);
 		Tree<String> node = new Tree<>(indexer.get(parent));
 		int mid = binaryDPSplit[parent][l][r];
@@ -183,6 +196,7 @@ class GenerativeParser implements Parser
 	public GenerativeParser(List<Tree<String>> trainTrees) {
 		System.out.print("Annotating / binarizing training trees ... ");
 		List<Tree<String>> annotatedTrainTrees = annotateTrees(trainTrees);
+		System.out.println(PennTreeRenderer.render(annotatedTrainTrees.get(0)));
 
 		System.out.println("done.");
 		System.out.print("Building grammar ... ");
@@ -222,17 +236,17 @@ class GenerativeParser implements Parser
 
 	private Tree<String> binarization(Tree<String> tree) {
 		List<String> path = new ArrayList<>();
-		Tree<String> verticalizedTree = verticalMarkovization(tree, path);
+		Tree<String> verticalizedTree = verticalMarkovization(tree, path, tree);
 		Tree<String> horizontalizedTree = horizontalMarkovication(verticalizedTree, tree);
 		return horizontalizedTree;
 	}
 
-	private Tree<String> verticalMarkovization(Tree<String> tree, List<String> path) {
+	private Tree<String> verticalMarkovization(Tree<String> tree, List<String> path, Tree<String> originalTree) {
 		if (tree.isLeaf()) return tree;
 		path.add(tree.getLabel());
 		List<Tree<String>> newSubtrees = new ArrayList<>();
 		for (Tree<String> subtree : tree.getChildren()) {
-		  newSubtrees.add(verticalMarkovization(subtree, path));
+		  newSubtrees.add(verticalMarkovization(subtree, path, originalTree));
 		}
 		path.remove(path.size() - 1);
 		StringBuilder nowLabel = new StringBuilder(tree.getLabel());
@@ -241,14 +255,14 @@ class GenerativeParser implements Parser
 			String label = path.get(path.size() - 1 - i);
 			nowLabel.append(String.format("^%s", label));
 		}
-		if (newSubtrees.size() == 1) {
-			if (!tree.getLabel().equals("ROOT") && !tree.isLeaf()) {
-				nowLabel.append("-U");
+		if (!tree.getLabel().equals("ROOT") && tree.getChildren().size() == 1) nowLabel.append("-U");
+		if (originalTree.getChildren().size() == 1 && !originalTree.isPreTerminal()) {
+		  String subLabel = originalTree.getChildren().get(0).getLabel();
+			if (subLabel.equals("DT")) {
+				newSubtrees.get(0).setLabel(subLabel + "^U");
 			}
-			Tree<String> subtree = newSubtrees.get(0);
-			String label = subtree.getLabel();
-			if (label.equals("DT") || label.equals("RB")) {
-				subtree.setLabel(label + "^U");
+		  if (subLabel.equals("RB")) {
+		    newSubtrees.get(0).setLabel(subLabel + "^U");
 			}
 		}
 		return new Tree<>(nowLabel.toString(), newSubtrees);
@@ -267,16 +281,13 @@ class GenerativeParser implements Parser
 			StringBuilder nowLabel = new StringBuilder("@");
 			nowLabel.append(tree.getLabel());
 			nowLabel.append("[");
+			if (i - (h - 1) > 0) nowLabel.append("...");
 			for (int j = 0; j < h; ++j) {
 				int idx = i - (h - 1) + j;
 				if (idx < 0) continue;
-				if (j == 0 && idx > 0) {
-					nowLabel.append("..._");
-				}
+        nowLabel.append("_");
 				nowLabel.append(originalTree.getChildren().get(idx).getLabel());
-				nowLabel.append("_");
 			}
-			nowLabel.setLength(nowLabel.length() - 1);
 			nowLabel.append("]");
 			newRoots.add(new Tree<>(nowLabel.toString()));
 		}
@@ -328,7 +339,7 @@ class GenerativeParser implements Parser
 	}
 
 	private boolean isValidScore(double a) {
-		return a != MIN_LOG_PROB && !Double.isNaN(a);
+		return !Double.isInfinite(a) && !Double.isNaN(a) && Double.isFinite(a);
 	}
 }
 
