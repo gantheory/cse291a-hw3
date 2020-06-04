@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="b635ee4e-2d6c-4e9f-91b0-864b8a1a563a" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/edu/berkeley/nlp/assignments/parsing/student/GenerativeParserFactory.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/edu/berkeley/nlp/assignments/parsing/student/GenerativeParserFactory.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -28,6 +29,7 @@
     <property name="project.structure.last.edited" value="Modules" />
     <property name="project.structure.proportion" value="0.15" />
     <property name="project.structure.side.proportion" value="0.2" />
+    <property name="settings.editor.selected.configurable" value="preferences.sourceCode" />
   </component>
   <component name="SvnConfiguration">
     <configuration />
@@ -40,7 +42,7 @@
       <option name="presentableId" value="Default" />
       <updated>1590788613821</updated>
       <workItem from="1590788617506" duration="1935000" />
-      <workItem from="1590790656346" duration="45146000" />
+      <workItem from="1590790656346" duration="66836000" />
     </task>
     <servers />
   </component>
@@ -48,17 +50,17 @@
     <option name="version" value="1" />
   </component>
   <component name="WindowStateProjectService">
-    <state x="348" y="313" key="SettingsEditor" timestamp="1590790584053">
+    <state x="348" y="313" key="SettingsEditor" timestamp="1591239250133">
       <screen x="0" y="23" width="3440" height="1417" />
     </state>
-    <state x="348" y="313" key="SettingsEditor/0.23.3440.1417/-1680.325.1680.1027@0.23.3440.1417" timestamp="1590790584053" />
+    <state x="348" y="313" key="SettingsEditor/0.23.3440.1417/-1680.325.1680.1027@0.23.3440.1417" timestamp="1591239250133" />
     <state x="2256" y="564" key="com.intellij.ide.util.TipDialog" timestamp="1590788617645">
       <screen x="0" y="23" width="3440" height="1417" />
     </state>
     <state x="2256" y="564" key="com.intellij.ide.util.TipDialog/0.23.3440.1417/-1680.325.1680.1027@0.23.3440.1417" timestamp="1590788617645" />
-    <state x="-1680" y="325" width="1680" height="1027" key="dock-window-1" timestamp="1591028808766">
+    <state x="-1680" y="325" width="1680" height="1027" key="dock-window-1" timestamp="1591215247048">
       <screen x="-1680" y="325" width="1680" height="1027" />
     </state>
-    <state x="-1680" y="325" width="1680" height="1027" key="dock-window-1/0.23.3440.1417/-1680.325.1680.1027@0.23.3440.1417" timestamp="1591028808766" />
+    <state x="-1680" y="325" width="1680" height="1027" key="dock-window-1/0.23.3440.1417/-1680.325.1680.1027@0.23.3440.1417" timestamp="1591215247048" />
   </component>
 </project>
