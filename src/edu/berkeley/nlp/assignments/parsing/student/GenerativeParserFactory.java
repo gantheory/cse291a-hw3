@@ -30,6 +30,7 @@ class GenerativeParser implements Parser
 	final int v = 2;
 	final int h = 2;
 	final double COUNT_THRESHOLD = 10.0;
+	final int mode = 1;
 
 	Grammar grammar;
 	SimpleLexicon lexicon;
@@ -49,16 +50,52 @@ class GenerativeParser implements Parser
 	Counter<String> stateCounter = new Counter<>();
 
 	public Tree<String> getBestParse(List<String> sentence) {
-		for (int state = 0; state < numOfStates; ++state) {
-			for (int i = 0; i < sentence.size(); ++i) {
-			  tagScore[state][i] = MIN_LOG_PROB;
-		  	for (int j = i; j < sentence.size(); ++j) {
-					unaryDP[state][i][j] = MIN_LOG_PROB;
-					unaryDPChild[state][i][j] = -1;
-					binaryDP[state][i][j] = MIN_LOG_PROB;
-					binaryDPLeftChild[state][i][j] = -1;
-					binaryDPRightChild[state][i][j] = -1;
-					binaryDPSplit[state][i][j] = -1;
+		if (mode == 0) {
+			for (int state = 0; state < numOfStates; ++state) {
+				for (int i = 0; i < sentence.size(); ++i) {
+					tagScore[state][i] = MIN_LOG_PROB;
+					for (int j = i; j < sentence.size(); ++j) {
+						unaryDP[state][i][j] = MIN_LOG_PROB;
+						unaryDPChild[state][i][j] = -1;
+						binaryDP[state][i][j] = MIN_LOG_PROB;
+						binaryDPLeftChild[state][i][j] = -1;
+						binaryDPRightChild[state][i][j] = -1;
+						binaryDPSplit[state][i][j] = -1;
+					}
+				}
+			}
+		} else if (mode == 1) {
+			for (int state = 0; state < numOfStates; ++state) {
+				for (int i = 0; i < sentence.size(); ++i)
+					tagScore[state][i] = MIN_LOG_PROB;
+			}
+			for (int length = 1; length <= sentence.size(); ++length) {
+				for (int state = 0; state < numOfStates; ++state) {
+					for (int i = 0; i < sentence.size() - length + 1; ++i) {
+						unaryDP[length][state][i] = MIN_LOG_PROB;
+						unaryDPChild[length][state][i] = -1;
+						binaryDP[length][state][i] = MIN_LOG_PROB;
+						binaryDPLeftChild[length][state][i] = -1;
+						binaryDPRightChild[length][state][i] = -1;
+						binaryDPSplit[length][state][i] = -1;
+					}
+				}
+			}
+		} else if (mode == 2) {
+			for (int state = 0; state < numOfStates; ++state) {
+				for (int i = 0; i < sentence.size(); ++i)
+					tagScore[state][i] = MIN_LOG_PROB;
+			}
+			for (int length = 1; length <= sentence.size(); ++length) {
+				for (int i = 0; i < sentence.size() - length + 1; ++i) {
+					for (int state = 0; state < numOfStates; ++state) {
+						unaryDP[length][i][state] = MIN_LOG_PROB;
+						unaryDPChild[length][i][state] = -1;
+						binaryDP[length][i][state] = MIN_LOG_PROB;
+						binaryDPLeftChild[length][i][state] = -1;
+						binaryDPRightChild[length][i][state] = -1;
+						binaryDPSplit[length][i][state] = -1;
+					}
 				}
 			}
 		}
@@ -73,57 +110,158 @@ class GenerativeParser implements Parser
 			}
 		}
 
-		for (int state = 0; state < numOfStates; ++state) {
-		  for (int i = 0; i < sentence.size(); ++i) {
-				for (UnaryRule rule : unaryClosure.getClosedUnaryRulesByParent(state)) {
-					double logRuleScore = rule.getScore();
-					if (!isValidScore(logRuleScore)) continue;
-					double logTerminalScore = tagScore[rule.getChild()][i];
-					if (!isValidScore(logTerminalScore)) continue;
-					double logScore = myLogAdd(logRuleScore, logTerminalScore);
-					if ((unaryDP[state][i][i] == MIN_LOG_PROB) || (logScore > unaryDP[state][i][i])) {
-						unaryDP[state][i][i] = logScore;
-						unaryDPChild[state][i][i] = rule.getChild();
+		if (mode == 0) {
+			for (int state = 0; state < numOfStates; ++state) {
+				for (int i = 0; i < sentence.size(); ++i) {
+					for (UnaryRule rule : unaryClosure.getClosedUnaryRulesByParent(state)) {
+						double logRuleScore = rule.getScore();
+						if (!isValidScore(logRuleScore)) continue;
+						double logTerminalScore = tagScore[rule.getChild()][i];
+						if (!isValidScore(logTerminalScore)) continue;
+						double logScore = myLogAdd(logRuleScore, logTerminalScore);
+						if ((unaryDP[state][i][i] == MIN_LOG_PROB) || (logScore > unaryDP[state][i][i])) {
+							unaryDP[state][i][i] = logScore;
+							unaryDPChild[state][i][i] = rule.getChild();
+						}
+					}
+				}
+			}
+		} else if (mode == 1) {
+			for (int state = 0; state < numOfStates; ++state) {
+				for (int i = 0; i < sentence.size(); ++i) {
+					for (UnaryRule rule : unaryClosure.getClosedUnaryRulesByParent(state)) {
+						double logRuleScore = rule.getScore();
+						if (!isValidScore(logRuleScore)) continue;
+						double logTerminalScore = tagScore[rule.getChild()][i];
+						if (!isValidScore(logTerminalScore)) continue;
+						double logScore = myLogAdd(logRuleScore, logTerminalScore);
+						if ((unaryDP[1][state][i] == MIN_LOG_PROB) || (logScore > unaryDP[1][state][i])) {
+							unaryDP[1][state][i] = logScore;
+							unaryDPChild[1][state][i] = rule.getChild();
+						}
+					}
+				}
+			}
+		} else if (mode == 2) {
+			for (int i = 0; i < sentence.size(); ++i) {
+				for (int state = 0; state < numOfStates; ++state) {
+					for (UnaryRule rule : unaryClosure.getClosedUnaryRulesByParent(state)) {
+						double logRuleScore = rule.getScore();
+						if (!isValidScore(logRuleScore)) continue;
+						double logTerminalScore = tagScore[rule.getChild()][i];
+						if (!isValidScore(logTerminalScore)) continue;
+						double logScore = myLogAdd(logRuleScore, logTerminalScore);
+						if ((unaryDP[1][i][state] == MIN_LOG_PROB) || (logScore > unaryDP[1][i][state])) {
+							unaryDP[1][i][state] = logScore;
+							unaryDPChild[1][i][state] = rule.getChild();
+						}
 					}
 				}
 			}
 		}
 
 		for (int length = 2; length <= sentence.size(); ++length) {
-			for (int state = 0; state < numOfStates; ++state) {
-				for (int i = 0; i < sentence.size() - length + 1; ++i) {
-					int j = i + length - 1;
-					for (BinaryRule rule : grammar.getBinaryRulesByParent(state)) {
-						double logRuleScore = rule.getScore();
-						if (!isValidScore(logRuleScore)) continue;
-						for (int k = i; k < j; ++k) {
-							double logLeftChildScore = unaryDP[rule.getLeftChild()][i][k];
-							if (!isValidScore(logLeftChildScore)) continue;
-							double logRightChildScore = unaryDP[rule.getRightChild()][k + 1][j];
-							if (!isValidScore(logRightChildScore)) continue;
-							double logScore = myLogAdd(myLogAdd(logRuleScore, logLeftChildScore), logRightChildScore);
-							if ((binaryDP[state][i][j] == MIN_LOG_PROB) || (logScore > binaryDP[state][i][j])) {
-								binaryDP[state][i][j] = logScore;
-								binaryDPLeftChild[state][i][j] = rule.getLeftChild();
-								binaryDPRightChild[state][i][j] = rule.getRightChild();
-								binaryDPSplit[state][i][j] = k;
+		  if (mode <= 1) {
+				for (int state = 0; state < numOfStates; ++state) {
+					for (int i = 0; i < sentence.size() - length + 1; ++i) {
+						int j = i + length - 1;
+						for (BinaryRule rule : grammar.getBinaryRulesByParent(state)) {
+							double logRuleScore = rule.getScore();
+							if (!isValidScore(logRuleScore)) continue;
+							for (int k = i; k < j; ++k) {
+								if (mode == 0) {
+									double logLeftChildScore = unaryDP[rule.getLeftChild()][i][k];
+									if (!isValidScore(logLeftChildScore)) continue;
+									double logRightChildScore = unaryDP[rule.getRightChild()][k + 1][j];
+									if (!isValidScore(logRightChildScore)) continue;
+									double logScore = myLogAdd(myLogAdd(logRuleScore, logLeftChildScore), logRightChildScore);
+									if ((binaryDP[state][i][j] == MIN_LOG_PROB) || (logScore > binaryDP[state][i][j])) {
+										binaryDP[state][i][j] = logScore;
+										binaryDPLeftChild[state][i][j] = rule.getLeftChild();
+										binaryDPRightChild[state][i][j] = rule.getRightChild();
+										binaryDPSplit[state][i][j] = k;
+									}
+								} else if (mode == 1) {
+									double logLeftChildScore = unaryDP[k - i + 1][rule.getLeftChild()][i];
+									if (!isValidScore(logLeftChildScore)) continue;
+									double logRightChildScore = unaryDP[j - k][rule.getRightChild()][k + 1];
+									if (!isValidScore(logRightChildScore)) continue;
+									double logScore = myLogAdd(myLogAdd(logRuleScore, logLeftChildScore), logRightChildScore);
+									if ((binaryDP[length][state][i] == MIN_LOG_PROB) || (logScore > binaryDP[length][state][i])) {
+										binaryDP[length][state][i] = logScore;
+										binaryDPLeftChild[length][state][i] = rule.getLeftChild();
+										binaryDPRightChild[length][state][i] = rule.getRightChild();
+										binaryDPSplit[length][state][i] = k;
+									}
+								}
 							}
 						}
 					}
 				}
-			}
-			for (int state = 0; state < numOfStates; ++state) {
+				for (int state = 0; state < numOfStates; ++state) {
+					for (int i = 0; i < sentence.size() - length + 1; ++i) {
+						int j = i + length - 1;
+						for (UnaryRule rule : unaryClosure.getClosedUnaryRulesByParent(state)) {
+							if (mode == 0) {
+								double logRuleScore = rule.getScore();
+								if (!isValidScore(logRuleScore)) continue;
+								double logChildScore = binaryDP[rule.getChild()][i][j];
+								if (!isValidScore(logChildScore)) continue;
+								double logScore = myLogAdd(logRuleScore, logChildScore);
+								if ((unaryDP[state][i][j] == MIN_LOG_PROB) || (logScore > unaryDP[state][i][j])) {
+									unaryDP[state][i][j] = logScore;
+									unaryDPChild[state][i][j] = rule.getChild();
+								}
+							} else if (mode == 1) {
+								double logRuleScore = rule.getScore();
+								if (!isValidScore(logRuleScore)) continue;
+								double logChildScore = binaryDP[length][rule.getChild()][i];
+								if (!isValidScore(logChildScore)) continue;
+								double logScore = myLogAdd(logRuleScore, logChildScore);
+								if ((unaryDP[length][state][i] == MIN_LOG_PROB) || (logScore > unaryDP[length][state][i])) {
+									unaryDP[length][state][i] = logScore;
+									unaryDPChild[length][state][i] = rule.getChild();
+								}
+							}
+						}
+					}
+				}
+			} else if (mode == 2) {
 				for (int i = 0; i < sentence.size() - length + 1; ++i) {
-					int j = i + length - 1;
-					for (UnaryRule rule : unaryClosure.getClosedUnaryRulesByParent(state)) {
-			  		double logRuleScore = rule.getScore();
-			  		if (!isValidScore(logRuleScore)) continue;
-						double logChildScore = binaryDP[rule.getChild()][i][j];
-						if (!isValidScore(logChildScore)) continue;
-			  		double logScore = myLogAdd(logRuleScore, logChildScore);
-						if ((unaryDP[state][i][j] == MIN_LOG_PROB) || (logScore > unaryDP[state][i][j])) {
-			  			unaryDP[state][i][j] = logScore;
-			  			unaryDPChild[state][i][j] = rule.getChild();
+					for (int state = 0; state < numOfStates; ++state) {
+						int j = i + length - 1;
+						for (BinaryRule rule : grammar.getBinaryRulesByParent(state)) {
+							double logRuleScore = rule.getScore();
+							if (!isValidScore(logRuleScore)) continue;
+							for (int k = i; k < j; ++k) {
+								double logLeftChildScore = unaryDP[k - i + 1][i][rule.getLeftChild()];
+								if (!isValidScore(logLeftChildScore)) continue;
+								double logRightChildScore = unaryDP[j - k][k + 1][rule.getRightChild()];
+								if (!isValidScore(logRightChildScore)) continue;
+								double logScore = myLogAdd(myLogAdd(logRuleScore, logLeftChildScore), logRightChildScore);
+								if ((binaryDP[length][i][state] == MIN_LOG_PROB) || (logScore > binaryDP[length][i][state])) {
+									binaryDP[length][i][state] = logScore;
+									binaryDPLeftChild[length][i][state] = rule.getLeftChild();
+									binaryDPRightChild[length][i][state] = rule.getRightChild();
+									binaryDPSplit[length][i][state] = k;
+								}
+							}
+						}
+					}
+				}
+				for (int i = 0; i < sentence.size() - length + 1; ++i) {
+					for (int state = 0; state < numOfStates; ++state) {
+						int j = i + length - 1;
+						for (UnaryRule rule : unaryClosure.getClosedUnaryRulesByParent(state)) {
+							double logRuleScore = rule.getScore();
+							if (!isValidScore(logRuleScore)) continue;
+							double logChildScore = binaryDP[length][i][rule.getChild()];
+							if (!isValidScore(logChildScore)) continue;
+							double logScore = myLogAdd(logRuleScore, logChildScore);
+							if ((unaryDP[length][i][state] == MIN_LOG_PROB) || (logScore > unaryDP[length][i][state])) {
+								unaryDP[length][i][state] = logScore;
+								unaryDPChild[length][i][state] = rule.getChild();
+							}
 						}
 					}
 				}
@@ -137,7 +275,14 @@ class GenerativeParser implements Parser
 
 	private Tree<String> buildUnaryTree(int parent, int l, int r, List<String> sentence) {
 		if (l == r) {
-			int preTerminal = unaryDPChild[parent][l][r];
+		  int preTerminal;
+		  if (mode == 0) {
+				preTerminal = unaryDPChild[parent][l][r];
+			} else if (mode == 1) {
+				preTerminal = unaryDPChild[r - l + 1][parent][l];
+			} else if (mode == 2) {
+		  	preTerminal = unaryDPChild[r - l + 1][l][parent];
+			}
 			Tree<String> treeWithTerminal = new Tree<>(indexer.get(preTerminal), Collections.singletonList(new Tree<>(sentence.get(l))));
 
 			if (parent == preTerminal) return treeWithTerminal;
@@ -159,7 +304,14 @@ class GenerativeParser implements Parser
 			}
 		}
 
-		int child = unaryDPChild[parent][l][r];
+		int child;
+		if (mode == 0) {
+		  child = unaryDPChild[parent][l][r];
+		} else if (mode == 1) {
+			child = unaryDPChild[r - l + 1][parent][l];
+		} else if (mode == 2) {
+			child = unaryDPChild[r - l + 1][l][parent];
+		}
 		if (parent == child) return buildBinaryTree(child, l, r, sentence);
 
 		if (unFoldClosure) {
@@ -184,9 +336,20 @@ class GenerativeParser implements Parser
 	private Tree<String> buildBinaryTree(int parent, int l, int r, List<String> sentence) {
 		if (l == r) return buildUnaryTree(parent, l, r, sentence);
 		Tree<String> node = new Tree<>(indexer.get(parent));
-		int mid = binaryDPSplit[parent][l][r];
-		int leftChild = binaryDPLeftChild[parent][l][r];
-		int rightChild = binaryDPRightChild[parent][l][r];
+		int mid, leftChild, rightChild;
+		if (mode == 0) {
+			mid = binaryDPSplit[parent][l][r];
+			leftChild = binaryDPLeftChild[parent][l][r];
+			rightChild = binaryDPRightChild[parent][l][r];
+		} else if (mode == 1) {
+			mid = binaryDPSplit[r - l + 1][parent][l];
+			leftChild = binaryDPLeftChild[r - l + 1][parent][l];
+			rightChild = binaryDPRightChild[r - l + 1][parent][l];
+		} else if (mode == 2) {
+			mid = binaryDPSplit[r - l + 1][l][parent];
+			leftChild = binaryDPLeftChild[r - l + 1][l][parent];
+			rightChild = binaryDPRightChild[r - l + 1][l][parent];
+		}
 	  Tree<String> leftTree = buildUnaryTree(leftChild, l, mid, sentence);
 	  Tree<String> rightTree = buildUnaryTree(rightChild, mid + 1, r, sentence);
 	  node.setChildren(new ArrayList<>(List.of(leftTree, rightTree)));
@@ -210,15 +373,34 @@ class GenerativeParser implements Parser
 		indexer = grammar.getLabelIndexer();
 
 		numOfStates = indexer.size();
+		System.out.println("Number of states: " + numOfStates);
 		rootID = indexer.indexOf("ROOT");
 
-		tagScore = new double[numOfStates][SENTENCE_LENGTH];
-		unaryDP = new double[numOfStates][SENTENCE_LENGTH][SENTENCE_LENGTH];
-		unaryDPChild = new int[numOfStates][SENTENCE_LENGTH][SENTENCE_LENGTH];
-		binaryDP = new double[numOfStates][SENTENCE_LENGTH][SENTENCE_LENGTH];
-		binaryDPLeftChild = new int[numOfStates][SENTENCE_LENGTH][SENTENCE_LENGTH];
-		binaryDPRightChild = new int[numOfStates][SENTENCE_LENGTH][SENTENCE_LENGTH];
-		binaryDPSplit = new int[numOfStates][SENTENCE_LENGTH][SENTENCE_LENGTH];
+		if (mode == 0) {
+			tagScore = new double[numOfStates][SENTENCE_LENGTH];
+			unaryDP = new double[numOfStates][SENTENCE_LENGTH][SENTENCE_LENGTH];
+			unaryDPChild = new int[numOfStates][SENTENCE_LENGTH][SENTENCE_LENGTH];
+			binaryDP = new double[numOfStates][SENTENCE_LENGTH][SENTENCE_LENGTH];
+			binaryDPLeftChild = new int[numOfStates][SENTENCE_LENGTH][SENTENCE_LENGTH];
+			binaryDPRightChild = new int[numOfStates][SENTENCE_LENGTH][SENTENCE_LENGTH];
+			binaryDPSplit = new int[numOfStates][SENTENCE_LENGTH][SENTENCE_LENGTH];
+		} else if (mode == 1) {
+			tagScore = new double[numOfStates][SENTENCE_LENGTH];
+			unaryDP = new double[SENTENCE_LENGTH + 1][numOfStates][SENTENCE_LENGTH];
+			unaryDPChild = new int[SENTENCE_LENGTH + 1][numOfStates][SENTENCE_LENGTH];
+			binaryDP = new double[SENTENCE_LENGTH + 1][numOfStates][SENTENCE_LENGTH];
+			binaryDPLeftChild = new int[SENTENCE_LENGTH + 1][numOfStates][SENTENCE_LENGTH];
+			binaryDPRightChild = new int[SENTENCE_LENGTH + 1][numOfStates][SENTENCE_LENGTH];
+			binaryDPSplit = new int[SENTENCE_LENGTH + 1][numOfStates][SENTENCE_LENGTH];
+		} else if (mode == 2) {
+			tagScore = new double[numOfStates][SENTENCE_LENGTH];
+			unaryDP = new double[SENTENCE_LENGTH + 1][SENTENCE_LENGTH][numOfStates];
+			unaryDPChild = new int[SENTENCE_LENGTH + 1][SENTENCE_LENGTH][numOfStates];
+			binaryDP = new double[SENTENCE_LENGTH + 1][SENTENCE_LENGTH][numOfStates];
+			binaryDPLeftChild = new int[SENTENCE_LENGTH + 1][SENTENCE_LENGTH][numOfStates];
+			binaryDPRightChild = new int[SENTENCE_LENGTH + 1][SENTENCE_LENGTH][numOfStates];
+			binaryDPSplit = new int[SENTENCE_LENGTH + 1][SENTENCE_LENGTH][numOfStates];
+		}
 	}
 
 	private List<Tree<String>> annotateTrees(List<Tree<String>> trees) {
@@ -226,11 +408,10 @@ class GenerativeParser implements Parser
 		for (Tree<String> tree : trees) {
 			Tree<String> binarizedTree = binarization(tree);
 			annotatedTrees.add(binarizedTree);
-			countState(binarizedTree);
 		}
-		for (Tree<String> tree : annotatedTrees) {
-			collapseHorizontal(tree);
-		}
+//		for (Tree<String> tree : annotatedTrees) {
+//			collapseHorizontal(tree);
+//		}
 		return annotatedTrees;
 	}
 
@@ -256,15 +437,6 @@ class GenerativeParser implements Parser
 			nowLabel.append(String.format("^%s", label));
 		}
 		if (!tree.getLabel().equals("ROOT") && tree.getChildren().size() == 1) nowLabel.append("-U");
-		if (originalTree.getChildren().size() == 1 && !originalTree.isPreTerminal()) {
-		  String subLabel = originalTree.getChildren().get(0).getLabel();
-			if (subLabel.equals("DT")) {
-				newSubtrees.get(0).setLabel(subLabel + "^U");
-			}
-		  if (subLabel.equals("RB")) {
-		    newSubtrees.get(0).setLabel(subLabel + "^U");
-			}
-		}
 		return new Tree<>(nowLabel.toString(), newSubtrees);
 	}
 
